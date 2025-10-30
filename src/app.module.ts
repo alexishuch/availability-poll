@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthModule } from './health/health.module';
 import { getTypeOrmConfig } from './database/typeorm.config';
+import { PollsModule } from './polls/polls.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { getTypeOrmConfig } from './database/typeorm.config';
       useFactory: getTypeOrmConfig,
     }),
     HealthModule,
+    PollsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
