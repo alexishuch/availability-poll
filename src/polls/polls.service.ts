@@ -1,15 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { UpdatePollDto } from './dto/update-poll.dto';
+import { Repository } from 'typeorm';
+import { Poll } from './entities/poll.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class PollsService {
+  constructor(
+    @InjectRepository(Poll)
+    private pollRepository: Repository<Poll>,
+  ) { }
+
   create(createPollDto: CreatePollDto) {
     return 'This action adds a new poll';
   }
 
-  findAll() {
-    return `This action returns all polls`;
+  async findAll() {
+    return this.pollRepository.find();
   }
 
   findOne(id: number) {

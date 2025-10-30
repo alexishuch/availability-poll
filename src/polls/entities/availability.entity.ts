@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Participant } from './participant.entity';
 
 @Entity('Availabilities')
@@ -11,5 +11,6 @@ export class Availability {
   slots: string;
 
   @ManyToOne(() => Participant, (participant: Participant) => participant.availabilities, { nullable: false })
+  @JoinColumn({ name: 'participant_id' })
   participant: Participant;
 }

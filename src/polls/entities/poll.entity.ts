@@ -10,13 +10,13 @@ export class Poll {
   name: string;
 
   @Column({ type: 'date', nullable: true })
-  startDate?: Date;
+  start_date?: Date;
 
   @Column({ type: 'date', nullable: true })
-  endDate?: Date;
+  end_date?: Date;
 
   @CreateDateColumn({ type: 'timestamp', default: () => 'now()' })
-  createdAt: Date;
+  created_at: Date;
 
   @OneToMany(() => Participant, (participant: Participant) => participant.poll)
   participants: Participant[];
