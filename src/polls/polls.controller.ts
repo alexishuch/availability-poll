@@ -1,11 +1,11 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { PollsService } from './polls.service';
-import { CreatePollDto } from './dto/create-poll.dto';
-import { UpdatePollDto } from './dto/update-poll.dto';
+import { CreatePollDto } from './models/create-poll.dto';
+import { UpdatePollDto } from './models/update-poll.dto';
 
 @Controller('polls')
 export class PollsController {
-  constructor(private readonly pollsService: PollsService) {}
+  constructor(private readonly pollsService: PollsService) { }
 
   @Post()
   create(@Body() createPollDto: CreatePollDto) {
@@ -18,8 +18,8 @@ export class PollsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.pollsService.findOne(+id);
+  findOneEnriched(@Param('id') id: string) {
+    return this.pollsService.findOneEnriched(+id);
   }
 
   @Patch(':id')

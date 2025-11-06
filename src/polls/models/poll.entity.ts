@@ -1,5 +1,5 @@
+import { Participant } from 'src/participants/models/participant.entity';
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn } from 'typeorm';
-import { Participant } from './participant.entity';
 
 @Entity('Polls')
 export class Poll {

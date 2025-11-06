@@ -6,6 +6,8 @@ import { AppService } from './app.service';
 import { HealthModule } from './health/health.module';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { PollsModule } from './polls/polls.module';
+import { AvailabilitiesModule } from './availabilities/availabilities.module';
+import { ParticipantsModule } from './participants/participants.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { PollsModule } from './polls/polls.module';
     }),
     HealthModule,
     PollsModule,
+    AvailabilitiesModule,
+    ParticipantsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

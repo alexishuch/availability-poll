@@ -1,8 +1,9 @@
+import { Availability } from 'src/availabilities/models/availability.entity';
+import { Poll } from 'src/polls/models/poll.entity';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Unique, JoinColumn } from 'typeorm';
-import { Poll } from './poll.entity';
-import { Availability } from './availability.entity';
 
 @Entity('Participants')
+@Unique(['poll', 'name'])
 export class Participant {
   @PrimaryGeneratedColumn()
   id: number;
