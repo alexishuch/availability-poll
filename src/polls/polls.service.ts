@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Poll } from './models/poll.entity';
-import { InjectRepository } from '@nestjs/typeorm';
+import { CreatePollDto, UpdatePollDto } from './models/polls.dto';
 import { IPoll, IPollEnriched } from './models/polls.interface';
-import { CreatePollDto } from './models/create-poll.dto';
-import { UpdatePollDto } from './models/update-poll.dto';
 
 @Injectable()
 export class PollsService {
@@ -71,11 +70,15 @@ ORDER BY cnt DESC, seg;
     return this.pollRepository.query(sql, [pollId]);
   }
 
-  update(id: number, updatePollDto: UpdatePollDto) {
-    return this.pollRepository.update(id, updatePollDto);
+  async update(id: number, updatePollDto: UpdatePollDto): Promise<IPoll> {
+    const poll = await this.pollRepository.findOne({ where: { id } });
+    if (!poll) throw new NotFoundException('Poll not found');
+    this.pollRepository.merge(poll, updatePollDto);
+    return this.pollRepository.save(poll);
   }
 
-  remove(id: number) {
-    return this.pollRepository.delete(id);
+  async remove(id: number): Promise<void> {
+    const result = await this.pollRepository.delete(id);
+    if (!result.affected) throw new NotFoundException('Poll not found');
   }
 }
