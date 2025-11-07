@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { CreateParticipantDto, UpdateParticipantDto } from './models/participants.dto';
 import { ParticipantsService } from './participants.service';
-import { CreateParticipantDto } from './models/create-participant.dto';
-import { UpdateParticipantDto } from './models/update-participant.dto';
 
 @Controller('participants')
 export class ParticipantsController {

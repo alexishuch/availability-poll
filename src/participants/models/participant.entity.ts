@@ -1,6 +1,6 @@
 import { Availability } from 'src/availabilities/models/availability.entity';
 import { Poll } from 'src/polls/models/poll.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Unique, JoinColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 @Entity('Participants')
 @Unique(['poll', 'name'])
@@ -11,7 +11,7 @@ export class Participant {
   @Column({ length: 50 })
   name: string;
 
-  @ManyToOne(() => Poll, (poll: Poll) => poll.participants, { nullable: true })
+  @ManyToOne(() => Poll, (poll: Poll) => poll.participants)
   @JoinColumn({ name: 'poll_id' })
   poll: Poll;
 
