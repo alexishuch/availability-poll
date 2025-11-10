@@ -20,7 +20,7 @@ export class PollsService {
     return this.pollRepository.find();
   }
 
-  async findOneEnriched(id: number): Promise<IPollEnriched | null> {
+  async findOneComputed(id: number): Promise<IPollEnriched | null> {
     const poll = await this.pollRepository.findOne({
       where: { id },
       relations: { participants: true }

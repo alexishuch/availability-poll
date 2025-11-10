@@ -16,9 +16,9 @@ export class PollsController {
     return this.pollsService.findAll();
   }
 
-  @Get(':id')
-  findOneEnriched(@Param('id') id: string) {
-    return this.pollsService.findOneEnriched(+id);
+  @Get(':id/computed')
+  findOneComputed(@Param('id') id: string) {
+    return this.pollsService.findOneComputed(+id);
   }
 
   @Patch(':id')
