@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Poll } from './models/poll.entity';
 import { CreatePollDto, UpdatePollDto } from './models/polls.dto';
-import { IPoll, IPollEnriched } from './models/polls.interface';
+import { ICommonSlot, IPoll, IPollEnriched } from './models/polls.interface';
 
 @Injectable()
 export class PollsService {
@@ -35,7 +35,7 @@ export class PollsService {
     };
   }
 
-  async findCommonSlots(pollId: number): Promise<{ segment: string; cnt: number; participants: string[] }[]> {
+  async findCommonSlots(pollId: number): Promise<ICommonSlot[]> {
     const sql = `
 WITH participant_ranges AS (
   SELECT p.id AS participant_id, p.name AS participant_name, slot
@@ -58,14 +58,15 @@ segments AS (
   WHERE next_b IS NOT NULL
 )
 SELECT 
-  seg AS segment,
-  COUNT(DISTINCT pr.participant_id) AS cnt,
-  ARRAY_AGG(DISTINCT pr.participant_name) AS participants
+  lower(seg) AS start_date,
+  upper(seg) AS end_date,
+  COUNT(DISTINCT pr.participant_id) AS count,
+  ARRAY_AGG(DISTINCT pr.participant_name) AS participants_names
 FROM segments
 JOIN participant_ranges pr ON pr.slot && seg
 GROUP BY seg
 HAVING COUNT(DISTINCT pr.participant_id) > 1
-ORDER BY cnt DESC, seg;
+ORDER BY count DESC, start_date;
 `;
     return this.pollRepository.query(sql, [pollId]);
   }
