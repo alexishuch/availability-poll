@@ -18,18 +18,16 @@ export class ParticipantsService {
     const participant = new Participant();
     participant.name = createParticipantDto.name;
 
-    if (createParticipantDto.pollId) {
-      const poll = await this.pollRepository.findOne({ where: { id: createParticipantDto.pollId } });
-      if (!poll) throw new NotFoundException('Poll not found');
-      participant.poll = poll;
-    }
+    const poll = await this.pollRepository.findOne({ where: { id: createParticipantDto.pollId } });
+    if (!poll) throw new NotFoundException('Poll not found');
+    participant.poll = poll;
 
     try {
       return await this.participantRepository.save(participant);
     } catch (error) {
       if (
         error instanceof QueryFailedError &&
-        (error as any).driverError?.code === '23505'
+        error.driverError?.code === '23505'
       ) {
         throw new ConflictException('Participant violates a unique constraint');
       }
@@ -58,7 +56,7 @@ export class ParticipantsService {
     } catch (error) {
       if (
         error instanceof QueryFailedError &&
-        (error as any).driverError?.code === '23505'
+        error.driverError?.code === '23505'
       ) {
         throw new ConflictException('Participant violates a unique constraint');
       }
