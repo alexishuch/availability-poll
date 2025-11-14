@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { convertDatetoPgTimestamptz, deserializeAvailability } from 'src/availabilities/date.tools';
+import { deserializeAvailability } from 'src/availabilities/date.tools';
 import { Participant } from 'src/participants/models/participant.entity';
 import { QueryFailedError, Repository } from 'typeorm';
 import { CreateAvailabilityDto } from './models/availabilities.dto';
@@ -21,14 +21,15 @@ export class AvailabilitiesService {
     if (!participant) throw new NotFoundException('Participant not found');
 
     const availability = new Availability();
-    const slotStart = createAvailabilityDto.slot_start.toISOString();
-    const slotEnd = createAvailabilityDto.slot_end.toISOString();
+    const slotStart = `"${createAvailabilityDto.slot_start.toISOString()}"`;
+    const slotEnd = `"${createAvailabilityDto.slot_end.toISOString()}"`;
     availability.slot = `{[${slotStart},${slotEnd})}`;
     availability.participant = participant;
 
     try {
       const savedAvailability = await this.availabilityRepository.save(availability);
-      return deserializeAvailability(savedAvailability, false);
+      // Slots are stored as ranges in Postgres, need to deserialize before returning
+      return deserializeAvailability(savedAvailability);
     } catch (error) {
       if (
         error instanceof QueryFailedError &&
@@ -44,7 +45,7 @@ export class AvailabilitiesService {
   async findOne(id: number): Promise<IAvailability> {
     const availability = await this.availabilityRepository.findOne({ where: { id }, relations: ['participant'] });
     if (!availability) throw new NotFoundException('Availability not found');
-    return deserializeAvailability(availability, true);
+    return deserializeAvailability(availability);
   }
 
   async remove(id: number): Promise<void> {
