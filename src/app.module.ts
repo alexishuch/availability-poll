@@ -1,7 +1,6 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthModule } from './health/health.module';
 import { getTypeOrmConfig } from './database/typeorm.config';
@@ -22,7 +21,6 @@ import { LoggerMiddleware } from './middlewares/logger.middleware';
     AvailabilitiesModule,
     ParticipantsModule,
   ],
-  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {
