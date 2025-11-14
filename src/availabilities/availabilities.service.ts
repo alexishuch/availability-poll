@@ -33,9 +33,8 @@ export class AvailabilitiesService {
     } catch (error) {
       if (
         error instanceof QueryFailedError &&
-        (error as any).driverError?.code === '23P01'
+        error.driverError?.code === '23P01'
       ) {
-        // Exclusion constraint violation (overlapping slots)
         throw new ConflictException('Participant already has an overlapping or identical slot');
       }
       throw error;
