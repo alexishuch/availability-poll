@@ -2,14 +2,17 @@ import { ConflictException } from "@nestjs/common";
 import { IAvailability } from "./models/availabilities.interface";
 import { Availability } from "./models/availability.entity";
 
-export function deserializeAvailability(availability: Availability): IAvailability {
-  const range = availability.slot.replace(/[{}]/g, '');
-  const match = range.match(/\["(.*?)","(.*?)"\)/);
+export function formatDateToPGSlotRange(slotStart: Date, slotEnd: Date): string {
+  const start = slotStart.toISOString();
+  const end = slotEnd.toISOString();
+  return `{["${start}","${end}")}`;
+}
 
+export function deserializeAvailability(availability: Availability): IAvailability {
+  const match = availability.slot.match(/\["(.*?)","(.*?)"\)/);
   if (!match) {
     throw new ConflictException('Unable to deserialize availability slot');
   }
-
   const [, slotStartRaw, slotEndRaw] = match;
 
   return {

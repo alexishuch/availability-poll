@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { deserializeAvailability } from 'src/availabilities/date.tools';
+import { deserializeAvailability, formatDateToPGSlotRange } from 'src/availabilities/date.tools';
 import { Participant } from 'src/participants/models/participant.entity';
 import { QueryFailedError, Repository } from 'typeorm';
 import { CreateAvailabilityDto } from './models/availabilities.dto';
@@ -21,9 +21,7 @@ export class AvailabilitiesService {
     if (!participant) throw new NotFoundException('Participant not found');
 
     const availability = new Availability();
-    const slotStart = `"${createAvailabilityDto.slot_start.toISOString()}"`;
-    const slotEnd = `"${createAvailabilityDto.slot_end.toISOString()}"`;
-    availability.slot = `{[${slotStart},${slotEnd})}`;
+    availability.slot = formatDateToPGSlotRange(createAvailabilityDto.slot_start, createAvailabilityDto.slot_end);
     availability.participant = participant;
 
     try {
