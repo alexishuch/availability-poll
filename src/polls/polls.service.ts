@@ -20,14 +20,12 @@ export class PollsService {
     return this.pollRepository.find();
   }
 
-  async findOneComputed(id: number): Promise<IPollEnriched | null> {
+  async findOneComputed(id: number): Promise<IPollEnriched> {
     const poll = await this.pollRepository.findOne({
       where: { id },
       relations: { participants: true }
     });
-    if (!poll) {
-      return null;
-    }
+    if (!poll) throw new NotFoundException('Poll not found');
     const commonSlots = await this.findCommonSlots(id);
     return {
       ...poll,

@@ -84,13 +84,12 @@ describe('PollsService', () => {
       });
     });
 
-    it('should return null if poll not found', async () => {
+    it('should throw NotFoundException if poll not found', async () => {
       jest.spyOn(pollRepository, 'findOne').mockResolvedValue(null);
 
-      const result = await service.findOneComputed(1);
+      const result = service.findOneComputed(1);
 
-      expect(result).toBeNull();
-      expect(pollRepository.query).not.toHaveBeenCalled();
+      await expect(result).rejects.toThrow(NotFoundException);
     });
   });
 
