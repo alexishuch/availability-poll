@@ -105,7 +105,8 @@ ORDER BY start_date;
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.pollRepository.delete(id);
-    if (!result.affected) throw new NotFoundException('Poll not found');
+    const poll = await this.pollRepository.findOne({ where: { id } });
+    if (!poll) throw new NotFoundException('Poll not found');
+    await this.pollRepository.remove(poll);
   }
 }
