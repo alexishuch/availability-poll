@@ -34,8 +34,15 @@ export class PollsService {
   }
 
   async findCommonSlots(pollId: number): Promise<ICommonSlot[]> {
+    // 1. Get all availability slots for participants in the poll
+    // 2. Create boundary points from all slots
+    // 3. Filter the last boundary if it has no upper bound
+    // 4. Create segments between each pair of boundary points
+    // 5. For each segment, join with participant ranges to see which participants have availability overlapping with the segment. Keep only segments with 2+ participants.
+    // 6. Display the segments with start_date, end_date, count of participants, and list of participant names
+
     const sql = `
-WITH participant_ranges AS (
+  WITH participant_ranges AS (
   SELECT p.id AS participant_id, p.name AS participant_name, slot
   FROM "Availabilities" a
   JOIN "Participants" p ON a.participant_id = p.id
@@ -68,31 +75,15 @@ segment_participants AS (
   LEFT JOIN participant_ranges pr ON pr.slot && s.seg
   GROUP BY seg
   HAVING COUNT(DISTINCT pr.participant_id) >= 2
-),
-segments_with_flags AS (
-  SELECT 
-    seg,
-    participants_names,
-    count,
-    LAG(upper(seg)) OVER (ORDER BY lower(seg)) AS prev_upper
-  FROM segment_participants
-),
-segments_grouped AS (
-  SELECT 
-    seg,
-    participants_names,
-    count,
-    SUM(CASE WHEN prev_upper = lower(seg) THEN 0 ELSE 1 END) OVER (ORDER BY lower(seg)) AS grp
-  FROM segments_with_flags
 )
 SELECT
   MIN(lower(seg)) AS start_date,
   MAX(upper(seg)) AS end_date,
   MAX(count) AS count,
   participants_names
-FROM segments_grouped
-GROUP BY grp, participants_names
-ORDER BY start_date;
+FROM segment_participants
+GROUP BY seg, participants_names
+ORDER BY count DESC, start_date;
 `;
     return this.pollRepository.query(sql, [pollId]);
   }
