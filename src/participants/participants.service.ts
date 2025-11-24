@@ -65,7 +65,8 @@ export class ParticipantsService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.participantRepository.delete(id);
-    if (!result.affected) throw new NotFoundException('Participant not found');
+    const participant = await this.participantRepository.findOne({ where: { id } });
+    if (!participant) throw new NotFoundException('Participant not found');
+    await this.participantRepository.remove(participant);
   }
 }

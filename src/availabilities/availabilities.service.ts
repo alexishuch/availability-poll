@@ -46,7 +46,8 @@ export class AvailabilitiesService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.availabilityRepository.delete(id);
-    if (!result.affected) throw new NotFoundException('Availability not found');
+    const availability = await this.availabilityRepository.findOne({ where: { id } });
+    if (!availability) throw new NotFoundException('Availability not found');
+    await this.availabilityRepository.remove(availability);
   }
 }
