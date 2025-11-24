@@ -1,68 +1,83 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PollsService } from './polls.service';
+import { Availability } from 'src/availabilities/models/availability.entity';
+import { Participant } from 'src/participants/models/participant.entity';
+import { clearTestData, createTestDataSource } from 'src/testing/test-helpers';
+import { DataSource, Repository } from 'typeorm';
 import { Poll } from './models/poll.entity';
 import { CreatePollDto, UpdatePollDto } from './models/polls.dto';
-import { NotFoundException } from '@nestjs/common';
-import { ICommonSlot } from './models/polls.interface';
-import { repositoryMock } from 'src/fixtures/repository.fixture';
-
-const createdAtDate = new Date('2025-01-01T00:00:00Z');
-const commonSlots: ICommonSlot[] = [
-  { start_date: new Date('2025-01-01T10:00:00'), end_date: new Date('2025-01-01T12:00:00'), count: 2, participants_names: ['John', 'Jane'] },
-];
+import { PollsService } from './polls.service';
 
 describe('PollsService', () => {
   let service: PollsService;
   let pollRepository: Repository<Poll>;
+  let participantRepository: Repository<Participant>;
+  let availabilityRepository: Repository<Availability>;
+  let dataSource: DataSource;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    dataSource = await createTestDataSource();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PollsService,
         {
           provide: getRepositoryToken(Poll),
-          useValue: repositoryMock,
+          useValue: dataSource.getRepository(Poll),
+        },
+        {
+          provide: getRepositoryToken(Participant),
+          useValue: dataSource.getRepository(Participant),
+        },
+        {
+          provide: getRepositoryToken(Availability),
+          useValue: dataSource.getRepository(Availability),
         },
       ],
     }).compile();
 
     service = module.get<PollsService>(PollsService);
     pollRepository = module.get<Repository<Poll>>(getRepositoryToken(Poll));
+    participantRepository = module.get<Repository<Participant>>(getRepositoryToken(Participant));
+    availabilityRepository = module.get<Repository<Availability>>(getRepositoryToken(Availability));
+  });
+
+  afterEach(async () => {
+    await clearTestData(dataSource);
+    jest.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    await dataSource.destroy();
   });
 
   describe('create', () => {
     it('should create a poll', async () => {
-      const createDto: CreatePollDto = { name: 'New Poll' };
-      const poll: Poll = { id: 1, ...createDto, participants: [], created_at: createdAtDate };
-      jest.spyOn(pollRepository, 'save').mockResolvedValue(poll);
+      const createDto: CreatePollDto = { name: 'Pierre Poll Jacques' };
 
       const result = await service.create(createDto);
 
-      expect(result).toEqual(poll);
-      expect(pollRepository.save).toHaveBeenCalledWith(createDto);
+      const stored = await pollRepository.findOne({ where: { id: result.id } });
+      expect(result.id).toBeDefined();
+      expect(stored).toMatchObject({ name: 'Pierre Poll Jacques' });
     });
   });
 
   describe('findAll', () => {
     it('should return all polls', async () => {
-      const polls: Poll[] = [
-        { id: 1, name: 'Poll 1', participants: [], created_at: createdAtDate },
-        { id: 2, name: 'Poll 2', participants: [], created_at: createdAtDate },
-      ];
-      jest.spyOn(pollRepository, 'find').mockResolvedValue(polls);
+      await pollRepository.save([
+        { name: 'Poll 1' },
+        { name: 'Poll 2' },
+      ]);
 
       const result = await service.findAll();
 
-      expect(result).toEqual(polls);
-      expect(pollRepository.find).toHaveBeenCalled();
+      expect(result).toHaveLength(2);
+      expect(result?.map((poll) => poll.name)).toEqual(expect.arrayContaining(['Poll 1', 'Poll 2']));
     });
 
     it('should return empty array when no polls exist', async () => {
-      jest.spyOn(pollRepository, 'find').mockResolvedValue([]);
-
       const result = await service.findAll();
 
       expect(result).toEqual([]);
@@ -71,22 +86,37 @@ describe('PollsService', () => {
 
   describe('findOneComputed', () => {
     it('should return enriched poll with common slots', async () => {
-      const poll: Poll = { id: 1, name: 'Test Poll', participants: [], created_at: createdAtDate };
-      jest.spyOn(pollRepository, 'findOne').mockResolvedValue(poll);
-      jest.spyOn(pollRepository, 'query').mockResolvedValue(commonSlots);
+      const poll = await pollRepository.save({ name: 'Pierre Poll Jacques' });
+      const john = await participantRepository.save({ name: 'John', poll });
+      const jane = await participantRepository.save({ name: 'Jane', poll });
+      await availabilityRepository.save([
+        {
+          participant: john,
+          slot: '{["2025-01-01 10:00:00+00", "2025-01-01 12:00:00+00")}'
+        },
+        {
+          participant: jane,
+          slot: '{["2025-01-01 11:00:00+00", "2025-01-01 13:00:00+00")}'
+        },
+      ]);
 
-      const result = await service.findOneComputed(1);
+      const result = await service.findOneComputed(poll.id);
 
-      expect(result).toEqual({ ...poll, commonSlots });
-      expect(pollRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 1 },
-        relations: { participants: true },
-      });
+      expect(result.participants).toHaveLength(2);
+      expect(result.participants.map((participant) => participant.name)).toEqual(
+        expect.arrayContaining(['John', 'Jane']),
+      );
+      expect(result.commonSlots).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            count: 2,
+            participants_names: ['Jane', 'John'],
+          }),
+        ]),
+      );
     });
 
     it('should throw NotFoundException if poll not found', async () => {
-      jest.spyOn(pollRepository, 'findOne').mockResolvedValue(null);
-
       const result = service.findOneComputed(1);
 
       await expect(result).rejects.toThrow(NotFoundException);
@@ -95,18 +125,57 @@ describe('PollsService', () => {
 
   describe('findCommonSlots', () => {
     it('should return common slots for a poll', async () => {
-      jest.spyOn(pollRepository, 'query').mockResolvedValue(commonSlots);
+      const poll = await pollRepository.save({ name: 'Overlap Poll' });
+      const john = await participantRepository.save({ name: 'John', poll });
+      const jane = await participantRepository.save({ name: 'Jane', poll });
+      await availabilityRepository.save([
+        {
+          participant: john,
+          slot: '{["2025-01-01 09:00:00+00", "2025-01-01 11:30:00+00"]}',
+        },
+        {
+          participant: john,
+          slot: '{["2025-01-01 13:00:00+00", "2025-01-01 15:00:00+00"]}',
+        },
+        {
+          participant: jane,
+          slot: '{["2025-01-01 10:00:00+00", "2025-01-01 12:00:00+00"]}',
+        },
+        {
+          participant: jane,
+          slot: '{["2025-01-01 14:00:00+00", "2025-01-01 16:00:00+00"]}',
+        },
+      ]);
 
-      const result = await service.findCommonSlots(1);
+      const result = await service.findCommonSlots(poll.id);
 
-      expect(result).toEqual(commonSlots);
-      expect(pollRepository.query).toHaveBeenCalledWith(expect.any(String), [1]);
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            start_date: new Date('2025-01-01T10:00:00.000Z'),
+            end_date: new Date('2025-01-01T11:30:00.000Z'),
+            count: 2,
+            participants_names: ['Jane', 'John'],
+          }),
+          expect.objectContaining({
+            start_date: new Date('2025-01-01T14:00:00.000Z'),
+            end_date: new Date('2025-01-01T15:00:00.000Z'),
+            count: 2,
+            participants_names: ['Jane', 'John'],
+          }),
+        ]),
+      );
     });
 
     it('should return empty array when no common slots exist', async () => {
-      jest.spyOn(pollRepository, 'query').mockResolvedValue([]);
+      const poll = await pollRepository.save({ name: 'Lonely Poll' });
+      const john = await participantRepository.save({ name: 'John', poll });
+      await availabilityRepository.save({
+        participant: john,
+        slot: '{["2025-01-02 09:00:00+00", "2025-01-02 10:00:00+00")}'
+      });
 
-      const result = await service.findCommonSlots(1);
+      const result = await service.findCommonSlots(poll.id);
 
       expect(result).toEqual([]);
     });
@@ -115,41 +184,33 @@ describe('PollsService', () => {
   describe('update', () => {
     it('should update a poll', async () => {
       const updateDto: UpdatePollDto = { name: 'Updated Poll' };
-      const poll: Poll = { id: 1, name: 'Old Poll', participants: [], created_at: createdAtDate };
-      const updatedPoll: Poll = { id: 1, name: 'Updated Poll', participants: [], created_at: createdAtDate };
-      jest.spyOn(pollRepository, 'findOne').mockResolvedValue(poll);
-      jest.spyOn(pollRepository, 'save').mockResolvedValue(updatedPoll);
+      const poll = await pollRepository.save({ name: 'Old Poll' });
 
-      const result = await service.update(1, updateDto);
+      const result = await service.update(poll.id, updateDto);
 
-      expect(result).toEqual(updatedPoll);
-      expect(pollRepository.merge).toHaveBeenCalledWith(poll, updateDto);
-      expect(pollRepository.save).toHaveBeenCalledWith(poll);
+      const stored = await pollRepository.findOne({ where: { id: poll.id } });
+      expect(result.name).toBe('Updated Poll');
+      expect(stored?.name).toBe('Updated Poll');
     });
 
     it('should throw NotFoundException if poll not found', async () => {
       const updateDto: UpdatePollDto = { name: 'Updated Poll' };
-      jest.spyOn(pollRepository, 'findOne').mockResolvedValue(null);
 
-      const result = service.update(1, updateDto);
-
-      await expect(result).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, updateDto)).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('remove', () => {
     it('should remove a poll', async () => {
-      jest.spyOn(pollRepository, 'delete').mockResolvedValue({ affected: 1, raw: [] });
+      const poll = await pollRepository.save({ name: 'Poll to remove' });
 
-      const result = service.remove(1);
+      await expect(service.remove(poll.id)).resolves.toBeUndefined();
 
-      await expect(result).resolves.toBeUndefined();
-      expect(pollRepository.delete).toHaveBeenCalledWith(1);
+      const stored = await pollRepository.findOne({ where: { id: poll.id } });
+      expect(stored).toBeNull();
     });
 
     it('should throw NotFoundException if poll not found', async () => {
-      jest.spyOn(pollRepository, 'delete').mockResolvedValue({ affected: 0, raw: [] });
-
       const result = service.remove(1);
 
       await expect(result).rejects.toThrow(NotFoundException);

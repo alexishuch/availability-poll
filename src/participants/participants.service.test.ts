@@ -1,32 +1,32 @@
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ParticipantsService } from './participants.service';
-import { Participant } from './models/participant.entity';
 import { Poll } from 'src/polls/models/poll.entity';
+import { clearTestData, createTestDataSource } from 'src/testing/test-helpers';
+import { DataSource, Repository } from 'typeorm';
+import { Participant } from './models/participant.entity';
 import { CreateParticipantDto, UpdateParticipantDto } from './models/participants.dto';
-import { ConflictException, NotFoundException } from '@nestjs/common';
-import { QueryFailedError } from 'typeorm';
-import { repositoryMock } from 'src/fixtures/repository.fixture';
-
-const createdAtDate = new Date('2025-01-01T00:00:00Z');
+import { ParticipantsService } from './participants.service';
 
 describe('ParticipantsService', () => {
   let service: ParticipantsService;
   let participantRepository: Repository<Participant>;
   let pollRepository: Repository<Poll>;
+  let dataSource: DataSource;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
+    dataSource = await createTestDataSource();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ParticipantsService,
         {
           provide: getRepositoryToken(Participant),
-          useValue: repositoryMock,
+          useValue: dataSource.getRepository(Participant),
         },
         {
           provide: getRepositoryToken(Poll),
-          useValue: repositoryMock,
+          useValue: dataSource.getRepository(Poll),
         },
       ],
     }).compile();
@@ -36,23 +36,37 @@ describe('ParticipantsService', () => {
     pollRepository = module.get<Repository<Poll>>(getRepositoryToken(Poll));
   });
 
+  afterEach(async () => {
+    await clearTestData(dataSource);
+    jest.clearAllMocks();
+  });
+
+  afterAll(async () => {
+    await dataSource.destroy();
+  });
+
   describe('create', () => {
-    it('should create a participant with valid pollId', async () => {
-      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: 1 };
-      const poll: Poll = { id: 1, name: 'Test Poll', participants: [], created_at: createdAtDate };
-      const participant: Participant = { id: 1, name: 'John Doe', poll, availabilities: [] };
-      jest.spyOn(pollRepository, 'findOne').mockResolvedValue(poll);
-      jest.spyOn(participantRepository, 'save').mockResolvedValue(participant);
+    it('should create a participant with valid pollId and return it', async () => {
+      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: poll.id };
 
       const result = await service.create(createDto);
+      const stored = await participantRepository.findOne({ where: { id: result.id }, relations: ['poll'] });
 
-      expect(result).toEqual(participant);
-      expect(pollRepository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result).toEqual({
+        name: 'John Doe',
+        poll,
+        id: expect.any(Number)
+      });
+      expect(stored).toEqual({
+        name: 'John Doe',
+        poll,
+        id: expect.any(Number)
+      });
     });
 
     it('should throw NotFoundException if poll not found', async () => {
-      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: 1 };
-      jest.spyOn(pollRepository, 'findOne').mockResolvedValue(null);
+      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: 999 };
 
       const result = service.create(createDto);
 
@@ -60,11 +74,9 @@ describe('ParticipantsService', () => {
     });
 
     it('should throw ConflictException on unique constraint violation', async () => {
-      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: 1 };
-      const poll: Poll = { id: 1, name: 'Test Poll', participants: [], created_at: createdAtDate };
-      const error = new QueryFailedError('query', [], { code: '23505' } as any);
-      jest.spyOn(pollRepository, 'findOne').mockResolvedValue(poll);
-      jest.spyOn(participantRepository, 'save').mockRejectedValue(error);
+      const poll = await pollRepository.save({ name: 'Test Poll' });
+      await participantRepository.save({ name: 'John Doe', poll });
+      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: poll.id };
 
       const result = service.create(createDto);
 
@@ -74,31 +86,36 @@ describe('ParticipantsService', () => {
 
   describe('findAll', () => {
     it('should return all participants', async () => {
-      const participants: Participant[] = [{ id: 1, name: 'John', poll: {} as Poll, availabilities: [] }];
-      jest.spyOn(participantRepository, 'find').mockResolvedValue(participants);
+      const poll = await pollRepository.save({ name: 'Test Poll' });
+      await participantRepository.save([
+        { name: 'John', poll },
+        { name: 'Jane', poll },
+      ]);
 
       const result = await service.findAll();
 
-      expect(result).toEqual(participants);
-      expect(participantRepository.find).toHaveBeenCalledWith({ relations: ['poll'] });
+      expect(result).toHaveLength(2);
+      expect(result.map((p) => p.name)).toEqual(expect.arrayContaining(['John', 'Jane']));
     });
   });
 
   describe('findOne', () => {
     it('should return a participant if found', async () => {
-      const participant: Participant = { id: 1, name: 'John', poll: {} as Poll, availabilities: [] };
-      jest.spyOn(participantRepository, 'findOne').mockResolvedValue(participant);
+      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const participant = await participantRepository.save({ name: 'John', poll });
 
-      const result = await service.findOne(1);
+      const result = await service.findOne(participant.id);
 
-      expect(result).toEqual(participant);
-      expect(participantRepository.findOne).toHaveBeenCalledWith({ where: { id: 1 }, relations: ['poll', 'availabilities'] });
+      expect(result).toEqual({
+        id: participant.id,
+        name: 'John',
+        poll: expect.objectContaining(poll),
+        availabilities: [],
+      });
     });
 
     it('should throw NotFoundException if participant not found', async () => {
-      jest.spyOn(participantRepository, 'findOne').mockResolvedValue(null);
-
-      const result = service.findOne(1);
+      const result = service.findOne(999);
 
       await expect(result).rejects.toThrow(NotFoundException);
     });
@@ -106,35 +123,32 @@ describe('ParticipantsService', () => {
 
   describe('update', () => {
     it('should update a participant', async () => {
+      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const participant = await participantRepository.save({ name: 'John Doe', poll });
       const updateDto: UpdateParticipantDto = { name: 'Jane Doe' };
-      const participant: Participant = { id: 1, name: 'John Doe', poll: {} as Poll, availabilities: [] };
-      const updatedParticipant: Participant = { id: 1, name: 'Jane Doe', poll: {} as Poll, availabilities: [] };
-      jest.spyOn(participantRepository, 'findOne').mockResolvedValue(participant);
-      jest.spyOn(participantRepository, 'save').mockResolvedValue(updatedParticipant);
 
-      const result = await service.update(1, updateDto);
+      const result = await service.update(participant.id, updateDto);
 
-      expect(result).toEqual(updatedParticipant);
-      expect(participantRepository.merge).toHaveBeenCalledWith(participant, updateDto);
+      expect(result.name).toBe('Jane Doe');
+      const stored = await participantRepository.findOne({ where: { id: participant.id } });
+      expect(stored?.name).toBe('Jane Doe');
     });
 
     it('should throw NotFoundException if participant not found', async () => {
       const updateDto: UpdateParticipantDto = { name: 'Jane Doe' };
-      jest.spyOn(participantRepository, 'findOne').mockResolvedValue(null);
 
-      const result = service.update(1, updateDto);
+      const result = service.update(999, updateDto);
 
       await expect(result).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException on unique constraint violation', async () => {
+      const poll = await pollRepository.save({ name: 'Test Poll' });
+      await participantRepository.save({ name: 'Jane Doe', poll });
+      const participant = await participantRepository.save({ name: 'John Doe', poll });
       const updateDto: UpdateParticipantDto = { name: 'Jane Doe' };
-      const participant: Participant = { id: 1, name: 'John Doe', poll: {} as Poll, availabilities: [] };
-      const error = new QueryFailedError('query', [], { code: '23505' } as any);
-      jest.spyOn(participantRepository, 'findOne').mockResolvedValue(participant);
-      jest.spyOn(participantRepository, 'save').mockRejectedValue(error);
 
-      const result = service.update(1, updateDto);
+      const result = service.update(participant.id, updateDto);
 
       await expect(result).rejects.toThrow(ConflictException);
     });
@@ -142,18 +156,17 @@ describe('ParticipantsService', () => {
 
   describe('remove', () => {
     it('should remove a participant', async () => {
-      jest.spyOn(participantRepository, 'delete').mockResolvedValue({ affected: 1, raw: [] });
+      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const participant = await participantRepository.save({ name: 'John', poll });
 
-      const result = service.remove(1);
+      await service.remove(participant.id);
+      const stored = await participantRepository.findOne({ where: { id: participant.id } });
 
-      await expect(result).resolves.toBeUndefined();
-      expect(participantRepository.delete).toHaveBeenCalledWith(1);
+      expect(stored).toBeNull();
     });
 
     it('should throw NotFoundException if participant not found', async () => {
-      jest.spyOn(participantRepository, 'delete').mockResolvedValue({ affected: 0, raw: [] });
-
-      const result = service.remove(1);
+      const result = service.remove(999);
 
       await expect(result).rejects.toThrow(NotFoundException);
     });
