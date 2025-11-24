@@ -2,17 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Participant } from 'src/participants/models/participant.entity';
 import { Poll } from 'src/polls/models/poll.entity';
-import { clearTestData, createTestDataSource } from 'src/testing/test-helpers';
+import { formattedSlot, formattedSlotFromDB, slotEndTimestamp, slotStartTimestamp, testParticipantData, testPollData } from 'src/testing/test-data.fixture';
+import { clearTestData, createTestDataSource } from 'src/testing/test-db.helper';
 import { DataSource, Repository } from 'typeorm';
 import { AvailabilitiesService } from './availabilities.service';
 import { Availability } from './models/availability.entity';
-
-const slotStartTimestamp = new Date('2024-01-01T10:00:00Z');
-const slotEndTimestamp = new Date('2024-01-01T11:00:00Z');
-const formattedSlot = '{["2024-01-01T10:00:00.000Z","2024-01-01T11:00:00.000Z")}';
-const formattedSlotFromDB = '{["2024-01-01 10:00:00","2024-01-01 11:00:00")}';
-const testPollData = { name: 'Test Poll' };
-const testParticipantData = { name: 'Guy' };
 
 describe('AvailabilitiesService', () => {
   let service: AvailabilitiesService;

@@ -2,7 +2,8 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Poll } from 'src/polls/models/poll.entity';
-import { clearTestData, createTestDataSource } from 'src/testing/test-helpers';
+import { testParticipantData, testPollData } from 'src/testing/test-data.fixture';
+import { clearTestData, createTestDataSource } from 'src/testing/test-db.helper';
 import { DataSource, Repository } from 'typeorm';
 import { Participant } from './models/participant.entity';
 import { CreateParticipantDto, UpdateParticipantDto } from './models/participants.dto';
@@ -47,7 +48,7 @@ describe('ParticipantsService', () => {
 
   describe('create', () => {
     it('should create a participant with valid pollId and return it', async () => {
-      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const poll = await pollRepository.save(testPollData);
       const createDto: CreateParticipantDto = { name: 'John Doe', pollId: poll.id };
 
       const result = await service.create(createDto);
@@ -74,9 +75,9 @@ describe('ParticipantsService', () => {
     });
 
     it('should throw ConflictException on unique constraint violation', async () => {
-      const poll = await pollRepository.save({ name: 'Test Poll' });
-      await participantRepository.save({ name: 'John Doe', poll });
-      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: poll.id };
+      const poll = await pollRepository.save(testPollData);
+      await participantRepository.save({ ...testParticipantData, poll });
+      const createDto: CreateParticipantDto = { name: testParticipantData.name, pollId: poll.id };
 
       const result = service.create(createDto);
 
@@ -86,7 +87,7 @@ describe('ParticipantsService', () => {
 
   describe('findAll', () => {
     it('should return all participants', async () => {
-      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const poll = await pollRepository.save(testPollData);
       await participantRepository.save([
         { name: 'John', poll },
         { name: 'Jane', poll },
@@ -101,7 +102,7 @@ describe('ParticipantsService', () => {
 
   describe('findOne', () => {
     it('should return a participant if found', async () => {
-      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const poll = await pollRepository.save(testPollData);
       const participant = await participantRepository.save({ name: 'John', poll });
 
       const result = await service.findOne(participant.id);
@@ -123,7 +124,7 @@ describe('ParticipantsService', () => {
 
   describe('update', () => {
     it('should update a participant', async () => {
-      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const poll = await pollRepository.save(testPollData);
       const participant = await participantRepository.save({ name: 'John Doe', poll });
       const updateDto: UpdateParticipantDto = { name: 'Jane Doe' };
 
@@ -143,7 +144,7 @@ describe('ParticipantsService', () => {
     });
 
     it('should throw ConflictException on unique constraint violation', async () => {
-      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const poll = await pollRepository.save(testPollData);
       await participantRepository.save({ name: 'Jane Doe', poll });
       const participant = await participantRepository.save({ name: 'John Doe', poll });
       const updateDto: UpdateParticipantDto = { name: 'Jane Doe' };
@@ -156,7 +157,7 @@ describe('ParticipantsService', () => {
 
   describe('remove', () => {
     it('should remove a participant', async () => {
-      const poll = await pollRepository.save({ name: 'Test Poll' });
+      const poll = await pollRepository.save(testPollData);
       const participant = await participantRepository.save({ name: 'John', poll });
 
       await service.remove(participant.id);
