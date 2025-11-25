@@ -39,13 +39,13 @@ export class AvailabilitiesService {
     }
   }
 
-  async findOne(id: number): Promise<IAvailability> {
+  async findOne(id: string): Promise<IAvailability> {
     const availability = await this.availabilityRepository.findOne({ where: { id }, relations: ['participant'] });
     if (!availability) throw new NotFoundException('Availability not found');
     return deserializeAvailability(availability);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const availability = await this.availabilityRepository.findOne({ where: { id } });
     if (!availability) throw new NotFoundException('Availability not found');
     await this.availabilityRepository.remove(availability);

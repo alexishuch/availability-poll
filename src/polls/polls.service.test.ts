@@ -117,7 +117,7 @@ describe('PollsService', () => {
     });
 
     it('should throw NotFoundException if poll not found', async () => {
-      const result = service.findOneComputed(1);
+      const result = service.findOneComputed('abcd1234');
 
       await expect(result).rejects.toThrow(NotFoundException);
     });
@@ -196,7 +196,7 @@ describe('PollsService', () => {
     it('should throw NotFoundException if poll not found', async () => {
       const updateDto: UpdatePollDto = { name: 'Updated Poll' };
 
-      await expect(service.update(999, updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.update('efgh5678', updateDto)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -211,7 +211,7 @@ describe('PollsService', () => {
     });
 
     it('should throw NotFoundException if poll not found', async () => {
-      const result = service.remove(1);
+      const result = service.remove('efgh5678');
 
       await expect(result).rejects.toThrow(NotFoundException);
     });

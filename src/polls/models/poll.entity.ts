@@ -1,10 +1,10 @@
 import { Participant } from 'src/participants/models/participant.entity';
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 
 @Entity('Polls')
 export class Poll {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn({ type: 'varchar', length: 8, default: () => "substr(gen_random_uuid()::text, 1, 8)" })
+  id: string;
 
   @Column({ length: 50 })
   name: string;
@@ -18,6 +18,6 @@ export class Poll {
   @CreateDateColumn({ type: 'timestamp', default: () => 'now()' })
   created_at: Date;
 
-  @OneToMany(() => Participant, (participant: Participant) => participant.poll)
+  @OneToMany(() => Participant, (participant: Participant) => participant.poll, { onDelete: 'CASCADE' })
   participants: Participant[];
 }

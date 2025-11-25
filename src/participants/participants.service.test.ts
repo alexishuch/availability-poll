@@ -2,7 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Poll } from 'src/polls/models/poll.entity';
-import { testParticipantData, testPollData } from 'src/testing/test-data.fixture';
+import { nonExistentParticipantId, testParticipantData, testPollData } from 'src/testing/test-data.fixture';
 import { clearTestData, createTestDataSource } from 'src/testing/test-db.helper';
 import { DataSource, Repository } from 'typeorm';
 import { Participant } from './models/participant.entity';
@@ -57,17 +57,17 @@ describe('ParticipantsService', () => {
       expect(result).toEqual({
         name: 'John Doe',
         poll,
-        id: expect.any(Number)
+        id: expect.any(String)
       });
       expect(stored).toEqual({
         name: 'John Doe',
         poll,
-        id: expect.any(Number)
+        id: expect.any(String)
       });
     });
 
     it('should throw NotFoundException if poll not found', async () => {
-      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: 999 };
+      const createDto: CreateParticipantDto = { name: 'John Doe', pollId: 'efgh5678' };
 
       const result = service.create(createDto);
 
@@ -116,7 +116,7 @@ describe('ParticipantsService', () => {
     });
 
     it('should throw NotFoundException if participant not found', async () => {
-      const result = service.findOne(999);
+      const result = service.findOne(nonExistentParticipantId);
 
       await expect(result).rejects.toThrow(NotFoundException);
     });
@@ -138,7 +138,7 @@ describe('ParticipantsService', () => {
     it('should throw NotFoundException if participant not found', async () => {
       const updateDto: UpdateParticipantDto = { name: 'Jane Doe' };
 
-      const result = service.update(999, updateDto);
+      const result = service.update(nonExistentParticipantId, updateDto);
 
       await expect(result).rejects.toThrow(NotFoundException);
     });
@@ -167,7 +167,7 @@ describe('ParticipantsService', () => {
     });
 
     it('should throw NotFoundException if participant not found', async () => {
-      const result = service.remove(999);
+      const result = service.remove(nonExistentParticipantId);
 
       await expect(result).rejects.toThrow(NotFoundException);
     });

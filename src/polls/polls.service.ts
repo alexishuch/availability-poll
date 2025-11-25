@@ -20,10 +20,10 @@ export class PollsService {
     return this.pollRepository.find();
   }
 
-  async findOneComputed(id: number): Promise<IPollEnriched> {
+  async findOneComputed(id: string): Promise<IPollEnriched> {
     const poll = await this.pollRepository.findOne({
       where: { id },
-      relations: { participants: true }
+      relations: { participants: true },
     });
     if (!poll) throw new NotFoundException('Poll not found');
     const commonSlots = await this.findCommonSlots(id);
@@ -33,7 +33,7 @@ export class PollsService {
     };
   }
 
-  async findCommonSlots(pollId: number): Promise<ICommonSlot[]> {
+  async findCommonSlots(pollId: string): Promise<ICommonSlot[]> {
     // 1. Get all availability slots for participants in the poll
     // 2. Create boundary points from all slots
     // 3. Filter the last boundary if it has no upper bound
@@ -88,14 +88,14 @@ ORDER BY count DESC, start_date;
     return this.pollRepository.query(sql, [pollId]);
   }
 
-  async update(id: number, updatePollDto: UpdatePollDto): Promise<IPoll> {
+  async update(id: string, updatePollDto: UpdatePollDto): Promise<IPoll> {
     const poll = await this.pollRepository.findOne({ where: { id } });
     if (!poll) throw new NotFoundException('Poll not found');
     this.pollRepository.merge(poll, updatePollDto);
     return this.pollRepository.save(poll);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const poll = await this.pollRepository.findOne({ where: { id } });
     if (!poll) throw new NotFoundException('Poll not found');
     await this.pollRepository.remove(poll);

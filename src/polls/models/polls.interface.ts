@@ -1,7 +1,7 @@
 import { IParticipant } from "src/participants/models/participants.interface";
 
 export interface IPoll {
-  id: number;
+  id: string;
   name: string;
   start_date?: Date;
   end_date?: Date;

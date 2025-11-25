@@ -2,10 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Participant } from 'src/participants/models/participant.entity';
 import { Poll } from 'src/polls/models/poll.entity';
-import { formattedSlot, formattedSlotFromDB, slotEndTimestamp, slotStartTimestamp, testParticipantData, testPollData } from 'src/testing/test-data.fixture';
+import { formattedSlot, formattedSlotFromDB, nonExistentAvailabilityId, nonExistentParticipantId, slotEndTimestamp, slotStartTimestamp, testParticipantData, testPollData } from 'src/testing/test-data.fixture';
 import { clearTestData, createTestDataSource } from 'src/testing/test-db.helper';
 import { DataSource, Repository } from 'typeorm';
 import { AvailabilitiesService } from './availabilities.service';
+import { CreateAvailabilityDto } from './models/availabilities.dto';
 import { Availability } from './models/availability.entity';
 
 describe('AvailabilitiesService', () => {
@@ -64,17 +65,17 @@ describe('AvailabilitiesService', () => {
       const result = await service.create(createDto);
 
       const stored = await availabilityRepository.findOne({ where: { id: result.id }, relations: ['participant'] });
-      expect(result).toEqual({ ...createDto, id: expect.any(Number) });
+      expect(result).toEqual({ ...createDto, id: expect.any(String) });
       expect(stored).toEqual({
-        id: expect.any(Number),
+        id: expect.any(String),
         participant: expect.objectContaining({ id: participant.id }),
         slot: formattedSlotFromDB,
       });
     });
 
     it('should throw NotFoundException if participant not found', async () => {
-      const createDto = {
-        participantId: 999,
+      const createDto: CreateAvailabilityDto = {
+        participantId: nonExistentParticipantId,
         slot_start: slotStartTimestamp,
         slot_end: slotEndTimestamp,
       };
@@ -123,7 +124,7 @@ describe('AvailabilitiesService', () => {
     });
 
     it('should throw NotFoundException if availability not found', async () => {
-      const result = service.findOne(999);
+      const result = service.findOne(nonExistentAvailabilityId);
 
       await expect(result).rejects.toThrow('Availability not found');
     });
@@ -145,7 +146,7 @@ describe('AvailabilitiesService', () => {
     });
 
     it('should throw NotFoundException if availability cannot be removed', async () => {
-      const result = service.remove(999);
+      const result = service.remove(nonExistentAvailabilityId);
 
       await expect(result).rejects.toThrow('Availability not found');
     });

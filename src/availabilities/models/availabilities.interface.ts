@@ -1,8 +1,8 @@
 export interface IAvailability {
-  id: number;
+  id: string;
   slot_start: Date;
   slot_end: Date;
-  participantId: number;
+  participantId: string;
 }
 
 export interface ICreateAvailability extends Omit<IAvailability, 'id'> { }

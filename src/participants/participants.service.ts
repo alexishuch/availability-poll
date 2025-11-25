@@ -39,13 +39,13 @@ export class ParticipantsService {
     return this.participantRepository.find({ relations: ['poll'] });
   }
 
-  async findOne(id: number): Promise<Participant> {
+  async findOne(id: string): Promise<Participant> {
     const participant = await this.participantRepository.findOne({ where: { id }, relations: ['poll', 'availabilities'] });
     if (!participant) throw new NotFoundException('Participant not found');
     return participant;
   }
 
-  async update(id: number, updateParticipantDto: UpdateParticipantDto): Promise<Participant> {
+  async update(id: string, updateParticipantDto: UpdateParticipantDto): Promise<Participant> {
     const participant = await this.participantRepository.findOne({ where: { id } });
     if (!participant) throw new NotFoundException('Participant not found');
     this.participantRepository.merge(participant, updateParticipantDto);
@@ -64,7 +64,7 @@ export class ParticipantsService {
     }
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const participant = await this.participantRepository.findOne({ where: { id } });
     if (!participant) throw new NotFoundException('Participant not found');
     await this.participantRepository.remove(participant);

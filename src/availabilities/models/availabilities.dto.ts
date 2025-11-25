@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsInt } from 'class-validator';
+import { IsDate, IsUUID } from 'class-validator';
 
 import { ICreateAvailability } from './availabilities.interface';
 
@@ -12,6 +12,6 @@ export class CreateAvailabilityDto implements ICreateAvailability {
   @IsDate()
   slot_end: Date;
 
-  @IsInt()
-  participantId: number;
+  @IsUUID()
+  participantId: string;
 }

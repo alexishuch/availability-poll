@@ -13,11 +13,11 @@ export class AvailabilitiesController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.availabilitiesService.findOne(+id);
+    return this.availabilitiesService.findOne(id);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.availabilitiesService.remove(+id);
+    return this.availabilitiesService.remove(id);
   }
 }

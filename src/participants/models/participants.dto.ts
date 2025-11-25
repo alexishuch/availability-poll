@@ -1,5 +1,5 @@
 import { PickType } from '@nestjs/mapped-types';
-import { IsInt, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, MaxLength, MinLength, Length, Matches } from 'class-validator';
 import { ICreateParticipant } from './participants.interface';
 
 export class CreateParticipantDto implements ICreateParticipant {
@@ -8,8 +8,10 @@ export class CreateParticipantDto implements ICreateParticipant {
   @MaxLength(50)
   name: string;
 
-  @IsInt()
-  pollId: number;
+  @IsString()
+  @Length(8, 8)
+  @Matches(/^[0-9a-f]{8}$/i)
+  pollId: string;
 }
 
 export class UpdateParticipantDto extends PickType(CreateParticipantDto, ['name']) {

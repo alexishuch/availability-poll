@@ -18,16 +18,16 @@ export class PollsController {
 
   @Get(':id/computed')
   findOneComputed(@Param('id') id: string) {
-    return this.pollsService.findOneComputed(+id);
+    return this.pollsService.findOneComputed(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePollDto: UpdatePollDto) {
-    return this.pollsService.update(+id, updatePollDto);
+    return this.pollsService.update(id, updatePollDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.pollsService.remove(+id);
+    return this.pollsService.remove(id);
   }
 }
