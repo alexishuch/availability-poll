@@ -3,7 +3,6 @@ import { IAvailability } from "./models/availabilities.interface";
 import { Availability } from "./models/availability.entity";
 
 export function formatDateToPGSlotRange(slotStart: Date, slotEnd: Date): string {
-  // toISOString returns the date in UTC format
   const start = slotStart.toISOString();
   const end = slotEnd.toISOString();
   return `{["${start}","${end}")}`;
