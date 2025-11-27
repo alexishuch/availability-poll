@@ -23,7 +23,7 @@ export class AvailabilitiesService {
 
     const { slot_start, slot_end } = createAvailabilityDto;
     if (slot_end <= slot_start) {
-      throw new BadRequestException('slot_end must be after slot_start');
+      throw new BadRequestException('Availability slot end date must be after start date');
     }
 
     if (slot_start < poll.created_at) {

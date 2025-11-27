@@ -114,7 +114,7 @@ describe('AvailabilitiesService', () => {
 
       const result = service.create(createDto);
 
-      await expect(result).rejects.toThrow('slot_end must be after slot_start');
+      await expect(result).rejects.toThrow('Availability slot end date must be after start date');
     });
 
     it('should throw BadRequestException if slot_start is before poll created_at', async () => {
