@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Poll } from './models/poll.entity';
@@ -12,7 +12,18 @@ export class PollsService {
     private pollRepository: Repository<Poll>,
   ) { }
 
-  create(createPollDto: CreatePollDto): Promise<IPoll> {
+  async create(createPollDto: CreatePollDto): Promise<IPoll> {
+    if (createPollDto.start_date) {
+      const todayDateString = new Date().toISOString().split('T')[0];
+      const startDateString = createPollDto.start_date.toISOString().split('T')[0];
+      if (startDateString < todayDateString) {
+        throw new BadRequestException('Poll start date cannot be in the past');
+      }
+      if (createPollDto.end_date && createPollDto.end_date < createPollDto.start_date) {
+        throw new BadRequestException('Poll end date must be after start date');
+      }
+    }
+
     return this.pollRepository.save(createPollDto);
   }
 
