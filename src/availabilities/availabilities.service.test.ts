@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Participant } from 'src/participants/models/participant.entity';
 import { Poll } from 'src/polls/models/poll.entity';
-import { formattedSlot, formattedSlotFromDB, nonExistentAvailabilityId, nonExistentParticipantId, slotEndTimestamp, slotStartTimestamp, testParticipantData, testPollData } from 'src/testing/test-data.fixture';
+import { formattedSlot, formattedSlotFromDB, localePollEndDate, localePollStartDate, nonExistentAvailabilityId, nonExistentParticipantId, slotEndTimestamp, slotStartTimestamp, testParticipantData, testPollData, testPollWithDatesData } from 'src/testing/test-data.fixture';
 import { clearTestData, createTestDataSource } from 'src/testing/test-db.helper';
 import { DataSource, Repository } from 'typeorm';
 import { AvailabilitiesService } from './availabilities.service';
@@ -56,7 +56,7 @@ describe('AvailabilitiesService', () => {
     it('should create an availability', async () => {
       const poll = await pollRepository.save(testPollData);
       const participant = await participantRepository.save({ ...testParticipantData, poll });
-      const createDto = {
+      const createDto: CreateAvailabilityDto = {
         participantId: participant.id,
         slot_start: slotStartTimestamp,
         slot_end: slotEndTimestamp,
@@ -92,15 +92,71 @@ describe('AvailabilitiesService', () => {
         participant,
         slot: formattedSlot,
       });
-      const createDto = {
+      const createDto: CreateAvailabilityDto = {
         participantId: participant.id,
-        slot_start: new Date('2024-01-01T10:30:00Z'),
-        slot_end: new Date('2024-01-01T11:30:00Z'),
+        slot_start: new Date('2025-01-02T10:30:00Z'),
+        slot_end: new Date('2025-01-02T11:30:00Z'),
       };
 
       const result = service.create(createDto);
 
       await expect(result).rejects.toThrow('Participant already has an overlapping or identical slot');
+    });
+
+    it('should throw BadRequestException if slot_end is not after slot_start', async () => {
+      const poll = await pollRepository.save(testPollData);
+      const participant = await participantRepository.save({ ...testParticipantData, poll });
+      const createDto: CreateAvailabilityDto = {
+        participantId: participant.id,
+        slot_start: slotEndTimestamp,
+        slot_end: slotStartTimestamp,
+      };
+
+      const result = service.create(createDto);
+
+      await expect(result).rejects.toThrow('slot_end must be after slot_start');
+    });
+
+    it('should throw BadRequestException if slot_start is before poll created_at', async () => {
+      const poll = await pollRepository.save(testPollData);
+      const participant = await participantRepository.save({ ...testParticipantData, poll });
+      const createDto: CreateAvailabilityDto = {
+        participantId: participant.id,
+        slot_start: new Date('2020-01-01T10:00:00Z'),
+        slot_end: new Date('2020-01-01T11:00:00Z'),
+      };
+
+      const result = service.create(createDto);
+
+      await expect(result).rejects.toThrow('Availability slot cannot start before poll creation date');
+    });
+
+    it('should throw BadRequestException if slot_start is before poll start_date', async () => {
+      const poll = await pollRepository.save(testPollWithDatesData);
+      const participant = await participantRepository.save({ ...testParticipantData, poll });
+      const createDto: CreateAvailabilityDto = {
+        participantId: participant.id,
+        slot_start: new Date('2025-01-01T10:00:00Z'),
+        slot_end: new Date('2025-01-01T11:00:00Z'),
+      };
+
+      const result = service.create(createDto);
+
+      await expect(result).rejects.toThrow(`Availability slot must start on or after poll start date (${localePollStartDate})`);
+    });
+
+    it('should throw BadRequestException if slot_end is after poll end_date', async () => {
+      const poll = await pollRepository.save(testPollWithDatesData);
+      const participant = await participantRepository.save({ ...testParticipantData, poll });
+      const createDto: CreateAvailabilityDto = {
+        participantId: participant.id,
+        slot_start: new Date('2025-01-13T10:00:00Z'),
+        slot_end: new Date('2025-01-14T10:00:00Z'),
+      };
+
+      const result = service.create(createDto);
+
+      await expect(result).rejects.toThrow(`Availability slot must end on or before poll end date (${localePollEndDate})`);
     });
   });
 

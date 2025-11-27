@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { deserializeAvailability, formatDateToPGSlotRange } from 'src/availabilities/date.tools';
 import { Participant } from 'src/participants/models/participant.entity';
@@ -17,8 +17,33 @@ export class AvailabilitiesService {
   ) { }
 
   async create(createAvailabilityDto: CreateAvailabilityDto): Promise<IAvailability> {
-    const participant = await this.participantRepository.findOne({ where: { id: createAvailabilityDto.participantId } });
+    const participant = await this.participantRepository.findOne({ where: { id: createAvailabilityDto.participantId }, relations: ['poll'] });
     if (!participant) throw new NotFoundException('Participant not found');
+    const poll = participant.poll;
+
+    const { slot_start, slot_end } = createAvailabilityDto;
+    if (slot_end <= slot_start) {
+      throw new BadRequestException('slot_end must be after slot_start');
+    }
+
+    if (slot_start < poll.created_at) {
+      throw new BadRequestException(`Availability slot cannot start before poll creation date (${poll.created_at.toLocaleDateString()})`);
+    }
+
+    if (poll.start_date) {
+      const pollStartDate = new Date(poll.start_date); // TypeORM returns type "date" as strings
+      if (slot_start < pollStartDate) {
+        throw new BadRequestException(`Availability slot must start on or after poll start date (${pollStartDate.toLocaleDateString()})`);
+      }
+    }
+
+    if (poll.end_date) {
+      const pollEndDate = new Date(poll.end_date); // TypeORM returns type "date" as strings
+      const pollEndDateEnd = new Date(pollEndDate.getFullYear(), pollEndDate.getMonth(), pollEndDate.getDate(), 23, 59, 59, 999);
+      if (slot_end > pollEndDateEnd) {
+        throw new BadRequestException(`Availability slot must end on or before poll end date (${pollEndDateEnd.toLocaleDateString()})`);
+      }
+    }
 
     const availability = new Availability();
     availability.slot = formatDateToPGSlotRange(createAvailabilityDto.slot_start, createAvailabilityDto.slot_end);
