@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Availability } from 'src/availabilities/models/availability.entity';
 import { Participant } from 'src/participants/models/participant.entity';
-import { clearTestData, createTestDataSource } from 'src/testing/test-db.helper';
+import { clearTestData, createTestDataSource } from 'test/test-db.helper';
 import { DataSource, Repository } from 'typeorm';
 import { Poll } from './models/poll.entity';
 import { CreatePollDto, UpdatePollDto } from './models/polls.dto';
