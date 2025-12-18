@@ -10,13 +10,13 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./back/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     restart: unless-stopped
 
   nestjs:
     platform: linux/arm/v7
     build:
-      context: .
+      context: ./back
     ports:
       - "3000:3000"
     environment:
