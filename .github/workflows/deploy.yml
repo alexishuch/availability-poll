@@ -33,6 +33,15 @@ jobs:
             sudo wg show || true
             exit 1
           }
+
+      - name: Debug network
+        run: |
+          ip a
+          sudo wg show
+          ping -c 2 "$DEPLOY_HOST" || true
+          nc -vz "$DEPLOY_HOST" 22 || true
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           
       - name: Add SSH known_hosts
         shell: bash
@@ -57,4 +66,4 @@ jobs:
       - name: Stop WireGuard
         if: always()
         shell: bash
-        run: sudo wg-quick down wg0 || true
+        run: sudo wg-quick down ~/.wireguard/wg0.conf || true
