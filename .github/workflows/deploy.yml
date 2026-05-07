@@ -57,8 +57,7 @@ jobs:
           ssh \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
-            "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            sudo /usr/local/bin/dispo-deploy.sh
+            "${DEPLOY_USER}@${DEPLOY_HOST}"
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
