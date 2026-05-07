@@ -12,11 +12,28 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Install WireGuard
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wireguard
+      
+      - name: Write WireGuard config
+        run: |
+          mkdir -p ~/.wireguard
+          cat > ~/.wireguard/wg0.conf <<'EOF'
+          ${{ secrets.WG_RUNNER_CONFIG }}
+          EOF
+          chmod 600 ~/.wireguard/wg0.conf
+          sed -n '1,20p' ~/.wireguard/wg0.conf | sed 's/PrivateKey.*/PrivateKey = ***hidden***/'
+      
       - name: Start WireGuard
-        uses: niklaskeerl/easy-wireguard-action@v2
-        with:
-          WG_CONFIG_FILE: ${{ secrets.WG_RUNNER_CONFIG }}
-
+        run: |
+          sudo wg-quick up ~/.wireguard/wg0.conf || {
+            sudo journalctl -xe --no-pager | tail -n 100 || true
+            sudo wg show || true
+            exit 1
+          }
+          
       - name: Add SSH known_hosts
         shell: bash
         run: |
