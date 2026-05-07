@@ -33,15 +33,6 @@ jobs:
             sudo wg show || true
             exit 1
           }
-
-      - name: Debug network
-        run: |
-          ip a
-          sudo wg show
-          ping -c 2 "$DEPLOY_HOST" || true
-          nc -vz "$DEPLOY_HOST" 22 || true
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           
       - name: Add SSH known_hosts
         shell: bash
@@ -51,16 +42,13 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
 
-      - name: Run deploy script
-        shell: bash
-        run: |
-          ssh \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            "${DEPLOY_USER}@${DEPLOY_HOST}"
-        env:
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      - name: Deploy to DietPi
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
 
       - name: Stop WireGuard
         if: always()
