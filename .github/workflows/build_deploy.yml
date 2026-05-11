@@ -83,13 +83,16 @@ jobs:
         with:
           WG_CONFIG_FILE: ${{ secrets.WG_RUNNER_CONFIG }}
 
-      - name: Add SSH known_hosts
+      - name: Configure SSH
         shell: bash
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
 
       - name: Run deploy script
         shell: bash
