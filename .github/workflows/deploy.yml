@@ -12,45 +12,29 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Install WireGuard
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wireguard
-      
-      - name: Write WireGuard config
-        run: |
-          mkdir -p ~/.wireguard
-          cat > ~/.wireguard/wg0.conf <<'EOF'
-          ${{ secrets.WG_RUNNER_CONFIG }}
-          EOF
-          chmod 600 ~/.wireguard/wg0.conf
-          sed -n '1,20p' ~/.wireguard/wg0.conf | sed 's/PrivateKey.*/PrivateKey = ***hidden***/'
-      
       - name: Start WireGuard
-        run: |
-          sudo wg-quick up ~/.wireguard/wg0.conf || {
-            sudo journalctl -xe --no-pager | tail -n 100 || true
-            sudo wg show || true
-            exit 1
-          }
-          
-      - name: Add SSH known_hosts
+        uses: niklaskeerl/easy-wireguard-action@v2
+        with:
+          WG_CONFIG_FILE: ${{ secrets.WG_RUNNER_CONFIG }}
+
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 #v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Run deploy script
         shell: bash
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            /usr/local/bin/dispo-deploy.sh
         env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-
-      - name: Deploy to DietPi
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          port: 22
 
       - name: Stop WireGuard
         if: always()
         shell: bash
-        run: sudo wg-quick down ~/.wireguard/wg0.conf || true
+        run: sudo wg-quick down wg0 || true
