@@ -86,8 +86,25 @@ jobs:
       - name: Add SSH known_hosts
         shell: bash
         run: |
+          echo "=== DEPLOY_HOST value ==="
+          echo "$DEPLOY_HOST"
+      
+          echo "=== Ping test ==="
+          ping -c 2 "$DEPLOY_HOST" && echo "Ping OK" || echo "Ping FAILED"
+      
+          echo "=== TCP port 22 reachable? ==="
+          timeout 5 bash -c "echo > /dev/tcp/$DEPLOY_HOST/22" && echo "Port 22 open" || echo "Port 22 unreachable"
+      
+          echo "=== ssh-keyscan output ==="
+          ssh-keyscan -v -H "$DEPLOY_HOST" 2>&1 | tee /tmp/keyscan_out
+          KEYSCAN_EXIT=${PIPESTATUS[0]}
+          echo "ssh-keyscan exit code: $KEYSCAN_EXIT"
+      
+          echo "=== Appending to known_hosts ==="
           mkdir -p ~/.ssh
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          cat /tmp/keyscan_out >> ~/.ssh/known_hosts
+          echo "known_hosts content:"
+          cat ~/.ssh/known_hosts
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
 
