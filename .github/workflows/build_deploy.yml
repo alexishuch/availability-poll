@@ -70,7 +70,7 @@ jobs:
           cache-to: type=gha,scope=frontend,mode=max
 
   deploy:
-    runs-on: [self-hosted, linux, arm64]
+    runs-on: ubuntu-24.04
     needs: build
     timeout-minutes: 10
     permissions:
@@ -78,20 +78,36 @@ jobs:
       packages: read
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-
-      - name: Login ghcr.io
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+      - name: Start WireGuard
+        uses: niklaskeerl/easy-wireguard-action@fdecd3aabde0060ec80f89aa03070ae0705fedba # v2.0.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          WG_CONFIG_FILE: ${{ secrets.WG_RUNNER_CONFIG }}
 
-      - name: Pull & restart containers
-        env:
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Add SSH known_hosts
+        shell: bash
         run: |
-          docker compose pull
-          docker compose up -d --remove-orphans
-          docker image prune -f
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+
+      - name: Run deploy script
+        shell: bash
+        run: |
+          ssh \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            sudo /usr/local/bin/github_deploy.sh \
+              --repo "$REPO" \
+              --sha "$SHA"
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ needs.build.outputs.image-tag }}
+
+      - name: Stop WireGuard
+        if: always()
+        shell: bash
+        run: sudo wg-quick down wg0 || true
